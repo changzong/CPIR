@@ -139,8 +139,10 @@ class Dynamic_Influence_Model(nn.Module):
 
         for i in range(self.num_rel):
             rnn = nn.LSTM(self.graph_emb_size, self.hidden_size, bidirectional=True).to(self.device)
-            for k, v in rnn.state_dict().items():
-                nn.init.constant_(v, 0)
+            for name, param in rnn.named_parameters():
+                nn.init.uniform_(param, -0.1, 0.1)
+            # for k, v in rnn.state_dict().items():
+            #    nn.init.constant_(v, 0)
             self.rnns.append(rnn)
 
             layer = nn.Sequential(
@@ -176,7 +178,8 @@ class Dynamic_Influence_Model(nn.Module):
                     emb_neighbor_t_1 = torch.index_select(embeddings[t], 0, neighbor_t[neighbor_t >= 0])
                     emb_neighbor_t_2 = torch.zeros([list(neighbor_t[neighbor_t < 0].size())[0], self.graph_emb_size]).to(self.device)
                     emb_neighbor_seq.append(torch.cat((emb_neighbor_t_1, emb_neighbor_t_2), 0)) # year * neighbor_num_rel * graph_emb_size
-                output, final_state = self.rnns[rel_type_idx](torch.stack(emb_neighbor_seq))
+                emb_neighbor_seq_norm = nn.functional.normalize(torch.stack(emb_neighbor_seq))
+                output, final_state = self.rnns[rel_type_idx](emb_neighbor_seq_norm)
                 final_state = final_state[0]
                 output_state_neighbor = self.fcs[rel_type_idx](torch.cat([final_state[-1], final_state[-2]], dim=1)) # neighbor_num_rel * output_size
                 rel_influence1 = torch.matmul(output_state_neighbor, rel_weight[0])
@@ -205,8 +208,10 @@ class Dynamic_Influence_Coarse_Model(nn.Module):
 
         for i in range(self.num_rel):
             rnn = nn.LSTM(self.graph_emb_size, self.hidden_size, bidirectional=True).to(self.device)
-            for k, v in rnn.state_dict().items():
-                nn.init.constant_(v, 0)
+            for name, param in rnn.named_parameters():
+                nn.init.uniform_(param, -0.1, 0.1)
+            # for k, v in rnn.state_dict().items():
+            #    nn.init.constant_(v, 0)
             self.rnns.append(rnn)
 
             layer = nn.Sequential(
@@ -238,7 +243,8 @@ class Dynamic_Influence_Coarse_Model(nn.Module):
                     emb_neighbor_t_1 = torch.index_select(embeddings[t], 0, neighbor_t[neighbor_t >= 0])
                     emb_neighbor_t_2 = torch.zeros([list(neighbor_t[neighbor_t < 0].size())[0], self.graph_emb_size]).to(self.device)
                     emb_neighbor_seq.append(torch.cat((emb_neighbor_t_1, emb_neighbor_t_2), 0)) # year * neighbor_num_rel * graph_emb_size
-                output, final_state = self.rnns[rel_type_idx](torch.stack(emb_neighbor_seq))
+                emb_neighbor_seq_norm = nn.functional.normalize(torch.stack(emb_neighbor_seq))
+                output, final_state = self.rnns[rel_type_idx](emb_neighbor_seq_norm)
                 final_state = final_state[0]
                 output_state_neighbor = self.fcs[rel_type_idx](torch.cat([final_state[-1], final_state[-2]], dim=1)) # neighbor_num_rel * output_size
                 influence_output.append(torch.sum(torch.matmul(output_state_neighbor, rel_weight), 0)) # rel_num * influence_size
@@ -302,6 +308,7 @@ class No_Influence_Model(nn.Module):
         self.influence_emb_size = influence_emb_size
         self.graph_emb_size = graph_emb_size
         self.device = device
+        print('Using influence type: no') 
 
     def forward(self, embeddings, train_year, index_list, input_ids, alignment_list, neighbors):
         influence_embeddings = []

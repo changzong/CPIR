@@ -75,7 +75,7 @@ class Model(nn.Module):
         elif self.conf['ts_mode'] == 'bi-hist-logistic':
             ts_model = Traj_Model(self.influence_emb_size, self.device, ts_func_type='logistic', rnn_type='bi')
         elif self.conf['ts_mode'] == 'simple':
-            ts_model = Traj_Model_Simple(self.influence_emb_size, self.predict_year, self.device)
+            ts_model = Traj_Model_Simple(self.influence_emb_size, self.time_steps_predict, self.predict_year, self.device)
 
         self.module_list = nn.ModuleList([rgcn_model, imputed_model, ts_model])
 

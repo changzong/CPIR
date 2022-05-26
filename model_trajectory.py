@@ -14,7 +14,7 @@ class Traj_Model(nn.Module):
         self.rnn_type = rnn_type
         self.pred_loss = None
 
-        self.mlp_hidden_size = {"base_hidden":20,"base_output":10,"param_hidden_1":20,"param_hidden_2":8,"param_output":1,"rnn":50}
+        self.mlp_hidden_size = {"base_hidden":64,"base_output":32,"param_hidden_1":24,"param_hidden_2":8,"param_output":1,"rnn":128}
 
         if self.rnn_type == 'uni':
             self.rnn = nn.GRU(self.imputed_size, self.mlp_hidden_size['rnn'], batch_first=True).to(self.device)
@@ -84,19 +84,23 @@ class Traj_Model(nn.Module):
         print("Using TS Function: " + self.ts_func_type +"  Using RNN type: " + str(self.rnn_type))
 
     def reset_parameters(self):
-        for k, v in self.rnn.state_dict().items():
-            torch.nn.init.constant_(v, 0)
+        for name, param in self.rnn.named_parameters():
+            nn.init.uniform_(param, -0.1, 0.1)
+        #for k, v in self.rnn.state_dict().items():
+        #    torch.nn.init.constant_(v, 0)
 
     # HINTS: https://dl.acm.org/doi/10.1145/3442381.3450107
     def log_survival(self, theta1, theta2, xi, t):
         return theta1*1/(np.sqrt(2*np.pi)*xi*t) * torch.exp(-(np.log(t)-theta2)**2/(2*xi**2))
+
+    def cdf_dist(self, theta1, theta2, xi, t):
+        return theta1 * (1 + torch.erf((np.log(t)-theta2) / (np.sqrt(2*np.pi) * xi)))
 
     def sigmoid_simple(self, theta1, theta2, theta3, t):
         eps = 1e-8
         return theta1 / ((1 + torch.exp(-1 * theta2 * (t - theta3))) + eps)
 
     # https://en.wikipedia.org/wiki/Generalised_logistic_function
-    # may need to try several times for a better initialization point for optimizing
     def logistic_general(self, theta1, theta2, theta3, xi, t):
         return theta1 / torch.pow(1 + xi * torch.exp(-1 * theta2 * (t - theta3)), 1 / xi)
 
@@ -104,10 +108,14 @@ class Traj_Model(nn.Module):
         final_state = None
         citation_pred_list = None
 
+        imputed_embeds = nn.functional.normalize(imputed_embeds)
+
         if self.rnn_type:
             output, final_state = self.rnn(imputed_embeds)
             if self.rnn_type == 'bi':
                 final_state = self.fc(self.relu(torch.cat([final_state[-1], final_state[-2]], dim=1))) # batch_size * output_size
+            else:
+                final_state = final_state[-1]
         else:
             final_state = imputed_embeds
 
@@ -119,7 +127,7 @@ class Traj_Model(nn.Module):
 
         if predict_year == 0:
             if self.ts_func_type == 'log':
-                citation_pred_list = [self.log_survival(theta1, theta2, xi, t) for t in range(1, predict_seq+1)]
+                citation_pred_list = [self.cdf_dist(theta1, theta2, xi, t) for t in range(1, predict_seq+1)]
             elif self.ts_func_type == 'logistic':
                 citation_pred_list = [self.logistic_general(theta1, theta2, theta3, xi, t) for t in range(1, predict_seq+1)]
                 # citation_pred_list = [self.sigmoid_simple(theta1, theta2, theta3, t) for t in range(1, predict_seq+1)]
@@ -140,19 +148,20 @@ class Traj_Model(nn.Module):
 
 
 class Traj_Model_Simple(nn.Module):
-    def __init__(self, imputed_size, predict_year, device):
+    def __init__(self, imputed_size, predict_seq, predict_year, device):
         super(Traj_Model_Simple, self).__init__()
         self.imputed_size = imputed_size
         self.predict_year = predict_year
+        self.predict_seq = predict_seq
         self.device = device
         self.pred_loss = None
-        self.mlp_hidden_size = {"base_hidden":20,"base_output":10,"param_hidden_1":20,"param_hidden_2":8,"param_output":1,"rnn":50}
+        self.mlp_hidden_size = {"base_hidden":64,"base_output":32,"param_hidden_1":20,"param_hidden_2":8,"param_output":1,"rnn":128}
         self.rnn = nn.GRU(self.imputed_size, self.mlp_hidden_size['rnn'], batch_first=True).to(self.device)
         self.reset_parameters()
 
         if predict_year == 0:
             self.mlp = nn.Sequential(
-                nn.Linear(self.mlp_hidden_size['rnn'], self.predict_year),
+                nn.Linear(self.mlp_hidden_size['rnn'], self.predict_seq),
                 nn.Softplus()
             )
         else:
@@ -164,10 +173,13 @@ class Traj_Model_Simple(nn.Module):
         print("Using TS Function: Linear")
 
     def reset_parameters(self):
-        for k, v in self.rnn.state_dict().items():
-            torch.nn.init.constant_(v, 0)
+        for name, param in self.rnn.named_parameters():
+            nn.init.uniform_(param, -0.1, 0.1)
+        #for k, v in self.rnn.state_dict().items():
+        #    torch.nn.init.constant_(v, 0)
 
     def forward(self, imputed_embeds, predict_seq, predict_year):
+        imputed_embeds = nn.functional.normalize(imputed_embeds)
         output, final_state = self.rnn(imputed_embeds)
 
         self.citation_pred = torch.squeeze(self.mlp(final_state)) # batch_size * years

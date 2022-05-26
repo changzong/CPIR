@@ -105,6 +105,16 @@ for epoch in range(args.epochs):
             valid_input_ids = valid_input_ids.to(device)
             valid_output_seq = valid_output_seq.to(device)
             loss, val_pred = model(adj_list, feature_list, index_list, alignment_list, valid_output_seq, valid_input_ids, valid_neighbors, flag='test')
+            print(str(valid_output_seq.tolist()[:5]))
+            print(str(val_pred.tolist()[:5]))
+            if epoch == 5:
+                with open('./output_seq', 'a') as f:
+                    for item in valid_output_seq.tolist():
+                        f.write(str(item) + '\n')
+                with open('./predict_seq', 'a') as f:
+                    for item in val_pred.tolist():
+                        f.write(str(item) + '\n')
+
             valid_loss += loss.item() * args.val_batch_size
         valid_loss = valid_loss / len(valid_loader.sampler)
         print("epoch: {}, validation loss:{}".format(epoch, valid_loss))
