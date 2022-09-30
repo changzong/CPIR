@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from model_embedding import RGCN_Model, RGCN_Time_Model
-from model_influence import Static_Influence_Model, Static_Plus_Influence_Model, Dynamic_Influence_Model, Dynamic_Influence_Coarse_Model, TACN_Influence_Model, No_Influence_Model
-from model_trajectory import Traj_Model, Traj_Model_Simple
+from model_embedding import RGCN_Model, RGCN_Time_Model, RGCN_Temporal_Model, No_Emb_Model
+from model_influence import Static_Influence_Model, Static_Plus_Influence_Model, Dynamic_Influence_Model, Dynamic_Influence_Coarse_Model, HDGNN_Influence_Model, TACN_Influence_Model, No_Influence_Model
+from model_trajectory import Traj_Model, Traj_Model_Linear, Traj_Model_Conv, Traj_Model_Mlp
 
 # Your future trajectory depends on your history status
 class Model(nn.Module):
@@ -44,19 +44,25 @@ class Model(nn.Module):
 
         if self.conf['emb_mode'] == 'rgcn':
             rgcn_model = RGCN_Model(self.input_size, self.hidden_size, self.graph_emb_size, self.num_bases, self.num_rel, self.num_layers, self.dropout, self.device)
+        elif self.conf['emb_mode'] == 'rgcn-t':
+            rgcn_model = RGCN_Temporal_Model(self.input_size, self.hidden_size, self.graph_emb_size, self.num_bases, self.num_rel, self.num_layers, self.dropout, self.device)
         elif self.conf['emb_mode'] == 'rgcn-hist':
             rgcn_model = RGCN_Time_Model(self.input_size, self.hidden_size, self.graph_emb_size, self.num_bases, self.num_rel, self.num_layers, self.dropout, self.device)
+        elif self.conf['emb_mode'] == 'no':
+            rgcn_model = No_Emb_Model(self.input_size, self.hidden_size, self.graph_emb_size, self.num_bases, self.num_rel, self.num_layers, self.dropout, self.device)
 
         if self.conf['impute_mode'] == 'static':
             imputed_model = Static_Influence_Model(self.influence_emb_size, self.graph_emb_size, self.num_rel, self.device)
+        elif self.conf['impute_mode'] == 'static-plus':
+            imputed_model = Static_Plus_Influence_Model(self.influence_emb_size, self.graph_emb_size, self.num_rel, self.device)
         elif self.conf['impute_mode'] == 'dynamic':
             imputed_model = Dynamic_Influence_Model(self.influence_emb_size, self.graph_emb_size, self.num_rel, self.device)
         elif self.conf['impute_mode'] == 'dynamic-co':
             imputed_model = Dynamic_Influence_Coarse_Model(self.influence_emb_size, self.graph_emb_size, self.num_rel, self.device)
         elif self.conf['impute_mode'] == 'static-plus':
             imputed_model = Static_Plus_Influence_Model(self.influence_emb_size, self.graph_emb_size, self.num_rel, self.device)
-        elif self.conf['impute_mode'] == 'dynamic-plus':
-            imputed_model = Dynamic_Plus_Influence_Model(self.influence_emb_size, self.graph_emb_size, self.num_rel, self.device)
+        elif self.conf['impute_mode'] == 'hdgnn':
+            imputed_model = HDGNN_Influence_Model(self.influence_emb_size, self.graph_emb_size, self.num_rel, self.batch_size, self.device)
         elif self.conf['impute_mode'] == 'tacn':
             imputed_model = TACN_Influence_Model(self.influence_emb_size, self.graph_emb_size, self.num_rel, self.device)
         elif self.conf['impute_mode'] == 'no':
@@ -74,8 +80,12 @@ class Model(nn.Module):
             ts_model = Traj_Model(self.influence_emb_size, self.device, ts_func_type='log', rnn_type='bi')
         elif self.conf['ts_mode'] == 'bi-hist-logistic':
             ts_model = Traj_Model(self.influence_emb_size, self.device, ts_func_type='logistic', rnn_type='bi')
-        elif self.conf['ts_mode'] == 'simple':
-            ts_model = Traj_Model_Simple(self.influence_emb_size, self.time_steps_predict, self.predict_year, self.device)
+        elif self.conf['ts_mode'] == 'linear':
+            ts_model = Traj_Model_Linear(self.influence_emb_size, self.time_steps_predict, self.predict_year, self.device)
+        elif self.conf['ts_mode'] == 'conv':
+            ts_model = Traj_Model_Conv(self.influence_emb_size, self.time_steps_predict, self.predict_year, self.device)
+        elif self.conf['ts_mode'] == 'mlp':
+            ts_model = Traj_Model_Mlp(self.influence_emb_size, self.time_steps_predict, self.predict_year, self.device)
 
         self.module_list = nn.ModuleList([rgcn_model, imputed_model, ts_model])
 

@@ -5,6 +5,8 @@ import numpy as np
 import random
 from sklearn.model_selection import train_test_split
 
+import pdb
+
 
 def normalize(mx):
     """Row-normalize sparse matrix"""
@@ -51,8 +53,8 @@ def generate_relation_index(graph_now, sample_idx, name_idx, rel_type):
         neighbors = [idx_name[n] for n in adj[rel_type].neighbors(idx)]
         patent_neighbors = []
         for item in neighbors:
-            if item in name_idx:
-                patent_neighbors.append(name_idx[item])
+            if str(item) in name_idx:
+                patent_neighbors.append(name_idx[str(item)])
         relation_dict[idx] = patent_neighbors
     return relation_dict
 
@@ -69,7 +71,7 @@ def get_neighbors(data_dir, idx_list, pub_year, rel_types):
             res_neighbors[idx] = all_neighbors
     return res_neighbors
 
-def get_graph_label(data_dir, pub_year, time_steps_history, time_steps_predict):
+def get_graph_label(data_dir, pub_year, time_steps_history, time_steps_predict, subtask):
     print('Loading data...')
     rel_types = []
     adj_list = []
@@ -81,8 +83,8 @@ def get_graph_label(data_dir, pub_year, time_steps_history, time_steps_predict):
     alignment_list = None
     sample_names = None
     graph_now = None
-
-    with open(data_dir+'/sample_names_'+str(pub_year), 'r') as f:
+    
+    with open(data_dir+'/sample_names_'+str(pub_year)+'_'+subtask, 'r') as f:
     # with open(data_dir+'/sample_names_'+str(pub_year)+'_newborn', 'r') as f:
     # with open(data_dir+'/sample_names_'+str(pub_year)+'_grown', 'r') as f:
         content = f.readlines()

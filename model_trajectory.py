@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 
+import pdb
 
 # Uni-GRU/Bi-GRU, Log/Sigmoid/Tanh
 class Traj_Model(nn.Module):
@@ -18,12 +19,12 @@ class Traj_Model(nn.Module):
 
         if self.rnn_type == 'uni':
             self.rnn = nn.GRU(self.imputed_size, self.mlp_hidden_size['rnn'], batch_first=True).to(self.device)
-            self.reset_parameters()
+            self.reset_rnn_parameters()
         elif self.rnn_type == 'bi':
             self.rnn = nn.GRU(self.imputed_size, self.mlp_hidden_size['rnn'], batch_first=True, bidirectional=True).to(self.device)
             self.fc = nn.Linear(2 * self.mlp_hidden_size['rnn'], self.mlp_hidden_size['rnn'])
             self.relu = nn.ReLU()
-            self.reset_parameters()
+            self.reset_rnn_parameters()
         else:
             self.rnn_type = None
 
@@ -81,13 +82,32 @@ class Traj_Model(nn.Module):
         )
         self.mlp_xi.to(self.device)
 
+        self.reset_mlp_parameters()
+
         print("Using TS Function: " + self.ts_func_type +"  Using RNN type: " + str(self.rnn_type))
 
-    def reset_parameters(self):
+    def reset_rnn_parameters(self):
         for name, param in self.rnn.named_parameters():
             nn.init.uniform_(param, -0.1, 0.1)
         #for k, v in self.rnn.state_dict().items():
         #    torch.nn.init.constant_(v, 0)
+    
+    def reset_mlp_parameters(self):
+        for m in self.mlp_base.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+        for m in self.mlp_theta1.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+        for m in self.mlp_theta2.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+        for m in self.mlp_theta3.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+        for m in self.mlp_xi.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
 
     # HINTS: https://dl.acm.org/doi/10.1145/3442381.3450107
     def log_survival(self, theta1, theta2, xi, t):
@@ -147,9 +167,9 @@ class Traj_Model(nn.Module):
 
 
 
-class Traj_Model_Simple(nn.Module):
+class Traj_Model_Linear(nn.Module):
     def __init__(self, imputed_size, predict_seq, predict_year, device):
-        super(Traj_Model_Simple, self).__init__()
+        super(Traj_Model_Linear, self).__init__()
         self.imputed_size = imputed_size
         self.predict_year = predict_year
         self.predict_seq = predict_seq
@@ -157,7 +177,6 @@ class Traj_Model_Simple(nn.Module):
         self.pred_loss = None
         self.mlp_hidden_size = {"base_hidden":64,"base_output":32,"param_hidden_1":20,"param_hidden_2":8,"param_output":1,"rnn":128}
         self.rnn = nn.GRU(self.imputed_size, self.mlp_hidden_size['rnn'], batch_first=True).to(self.device)
-        self.reset_parameters()
 
         if predict_year == 0:
             self.mlp = nn.Sequential(
@@ -170,18 +189,108 @@ class Traj_Model_Simple(nn.Module):
                 nn.Softplus()
             )
         self.mlp.to(self.device)
-        print("Using TS Function: Linear")
+        self.reset_parameters()
+
+        print("Using TS Function: linear")
 
     def reset_parameters(self):
         for name, param in self.rnn.named_parameters():
             nn.init.uniform_(param, -0.1, 0.1)
         #for k, v in self.rnn.state_dict().items():
         #    torch.nn.init.constant_(v, 0)
+        for m in self.mlp.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
 
     def forward(self, imputed_embeds, predict_seq, predict_year):
         imputed_embeds = nn.functional.normalize(imputed_embeds)
         output, final_state = self.rnn(imputed_embeds)
 
+        self.citation_pred = torch.squeeze(self.mlp(final_state)) # batch_size * years
+
+        return self.citation_pred
+
+
+class Traj_Model_Conv(nn.Module):
+    def __init__(self, imputed_size, predict_seq, predict_year, device):
+        super(Traj_Model_Conv, self).__init__()
+        self.imputed_size = imputed_size
+        self.predict_year = predict_year
+        self.predict_seq = predict_seq
+        self.device = device
+        self.pred_loss = None
+        self.mlp_hidden_size = {"base_hidden":64,"base_output":32,"param_hidden_1":20,"param_hidden_2":8,"param_output":1,"rnn":128}
+        self.rnn = nn.GRU(self.imputed_size, self.mlp_hidden_size['rnn'], batch_first=True).to(self.device)
+        self.conv = nn.Conv1d(self.imputed_size, self.imputed_size, predict_seq).to(self.device)
+
+        if predict_year == 0:
+            self.mlp = nn.Sequential(
+                nn.Linear(self.mlp_hidden_size['rnn'], self.predict_seq),
+                nn.Softplus()
+            )
+        else:
+            self.mlp = nn.Sequential(
+                nn.Linear(self.mlp_hidden_size['rnn'], 1),
+                nn.Softplus()
+            )
+        self.mlp.to(self.device)
+        self.reset_parameters()
+
+        print("Using TS Function: conv")
+
+    def reset_parameters(self):
+        for name, param in self.rnn.named_parameters():
+            nn.init.uniform_(param, -0.1, 0.1)
+        #for k, v in self.rnn.state_dict().items():
+        #    torch.nn.init.constant_(v, 0)
+        for m in self.mlp.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+
+    def forward(self, imputed_embeds, predict_seq, predict_year):
+        imputed_embeds = nn.functional.normalize(imputed_embeds)
+        output, final_state = self.rnn(imputed_embeds)
+        output = output.permute(0,2,1)
+        output_res = self.conv(output)
+        output_res = output_res.permute(2,0,1)
+        self.citation_pred = torch.squeeze(self.mlp(output_res)) # batch_size * years
+
+        return self.citation_pred
+
+
+class Traj_Model_Mlp(nn.Module):
+    def __init__(self, imputed_size, predict_seq, predict_year, device):
+        super(Traj_Model_Mlp, self).__init__()
+        self.imputed_size = imputed_size
+        self.predict_year = predict_year
+        self.predict_seq = predict_seq
+        self.device = device
+        self.pred_loss = None
+        self.mlp_hidden_size = {"base_hidden":64,"base_output":32,"param_hidden_1":20,"param_hidden_2":8,"param_output":1,"rnn":128}
+
+        if predict_year == 0:
+            self.mlp = nn.Sequential(
+                nn.Linear(self.mlp_hidden_size['rnn'], self.predict_seq),
+                nn.Softplus()
+            )
+        else:
+            self.mlp = nn.Sequential(
+                nn.Linear(self.mlp_hidden_size['rnn'], 1),
+                nn.Softplus()
+            )
+        self.mlp.to(self.device)
+        self.reset_parameters()
+
+        print("Using TS Function: linear")
+
+    def reset_parameters(self):
+        for m in self.mlp.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+
+    def forward(self, imputed_embeds, predict_seq, predict_year):
+        imputed_embeds = nn.functional.normalize(imputed_embeds)
+        final_state = imputed_embeds
         self.citation_pred = torch.squeeze(self.mlp(final_state)) # batch_size * years
 
         return self.citation_pred

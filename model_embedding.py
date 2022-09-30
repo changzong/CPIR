@@ -1,9 +1,11 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn.parameter import Parameter
 import torch.nn.functional as F
 from rgcn import RGCN, RGCN_Time
 
+import pdb
 
 class RGCN_Model(nn.Module):
     def __init__(self, 
@@ -40,6 +42,7 @@ class RGCN_Model(nn.Module):
     def forward(self, feature_list, adj_list, alignment_list, train_year):
         embeddings = []
         for t in range(train_year):
+            pdb.set_trace()
             x = feature_list[t].to(self.device)
             y = adj_list[t]
             for i, layer in enumerate(self.layers):
@@ -51,7 +54,61 @@ class RGCN_Model(nn.Module):
 
             embeddings.append(x)
 
-        return  embeddings
+        return embeddings
+
+
+class RGCN_Temporal_Model(nn.Module):
+    def __init__(self, 
+        input_size,
+        hidden_size,
+        output_size,
+        num_bases,
+        num_rel,
+        num_layers,
+        dropout,
+        device
+    ):
+        super(RGCN_Temporal_Model, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.num_bases = num_bases
+        self.num_rel = num_rel
+        self.num_layers = num_layers
+        self.dropout = dropout
+        self.layers = nn.ModuleList()
+        self.relu = nn.ReLU()
+        self.device = device
+        self.weight = torch.ones(self.input_size, self.output_size).to(self.device)
+        for i in range(self.num_layers):
+            if i == 0:
+                self.layers.append(RGCN(self.output_size, self.hidden_size, self.num_bases, self.num_rel, self.device))
+            else:
+                if i == self.num_layers - 1:
+                    self.layers.append(RGCN(self.hidden_size, self.output_size, self.num_bases, self.num_rel, self.device))
+                else:
+                    self.layers.append(RGCN(self.hidden_size, self.hidden_size, self.num_bases, self.num_rel, self.device))
+        print('Using embedding type: rgcn')
+
+    def forward(self, feature_list, adj_list, alignment_list, train_year):
+        embeddings = []
+        for t in range(train_year):
+            x = feature_list[t].to(self.device)
+            x = torch.matmul(x.float(), self.weight.float())
+            if t > 0:
+                index_list = alignment_list[:, t-1][alignment_list[:, t-1] >= 0]
+                x[index_list] = embeddings[t-1]
+            y = adj_list[t]
+            for i, layer in enumerate(self.layers):
+                x = layer(x, y)
+                if i != self.num_layers - 1:
+                    x = F.dropout(self.relu(x), self.dropout, training=self.training)
+                else:
+                    x = F.dropout(x, self.dropout, training=self.training)
+
+            embeddings.append(x)
+
+        return embeddings
 
 
 # RGCN initialized with previous embeddings
@@ -134,3 +191,36 @@ class RGCN_Time_Model(nn.Module):
 
         return  embeddings
 
+class No_Emb_Model(nn.Module):
+    def __init__(self, 
+        input_size,
+        hidden_size,
+        output_size,
+        num_bases,
+        num_rel,
+        num_layers,
+        dropout,
+        device
+    ):
+        super(No_Emb_Model, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.num_bases = num_bases
+        self.num_rel = num_rel
+        self.num_layers = num_layers
+        self.dropout = dropout
+        self.layers = nn.ModuleList()
+        self.relu = nn.ReLU()
+        self.device = device
+        self.weight = torch.ones(self.input_size, self.output_size).to(self.device)
+        print('Using embedding type: no')
+
+    def forward(self, feature_list, adj_list, alignment_list, train_year):
+        embeddings = []
+        for t in range(train_year):
+            x = feature_list[t].to(self.device)
+            x = torch.matmul(x.float(), self.weight.float())
+            embeddings.append(x)
+
+        return embeddings

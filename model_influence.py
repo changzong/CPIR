@@ -3,7 +3,9 @@ import torch.nn as nn
 from torch.nn.parameter import Parameter
 from tacn import TACN
 
-# normal influence
+import pdb
+
+# normal influence (HINTS)
 class Static_Influence_Model(nn.Module):
     def __init__(self, influence_emb_size, graph_emb_size, num_rel, device):
         super(Static_Influence_Model, self).__init__()
@@ -53,6 +55,72 @@ class Static_Influence_Model(nn.Module):
         influence_embeddings = torch.stack(influence_embeddings)
         influence_embeddings = torch.reshape(influence_embeddings, (-1, train_year, self.influence_emb_size)) # input_size * year_size * influence_size
 
+        return influence_embeddings
+
+
+# normal influence (HDGNN approximate)
+class HDGNN_Influence_Model(nn.Module):
+    def __init__(self, influence_emb_size, graph_emb_size, num_rel, batch_size, device):
+        super(HDGNN_Influence_Model, self).__init__()
+        self.influence_emb_size = influence_emb_size
+        self.graph_emb_size = graph_emb_size
+        self.num_rel = num_rel
+        self.device = device
+        self.hidden_size = 128
+        self.output_size = 64
+        self.num_heads = 2
+
+        self.mlp = nn.Sequential(
+            nn.Linear(self.graph_emb_size, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32)
+        ).to(self.device)
+        self.gru = nn.GRU(32, self.output_size, batch_first=True, bidirectional=True).to(self.device)
+        self.multihead_attn = nn.MultiheadAttention(self.hidden_size, self.num_heads).to(self.device)
+        self.query = Parameter(torch.FloatTensor(5, batch_size, self.influence_emb_size)).to(self.device)
+
+        self.reset_parameters()
+
+        print('Using influence type: hdgnn')
+
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.query.data)
+        for name, param in self.gru.named_parameters():
+            nn.init.uniform_(param, -0.1, 0.1)
+        for m in self.mlp.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+
+    def forward(self, embeddings, train_year, index_list, input_ids, alignment_list, neighbors):
+        influence_embeddings = []
+        for i in range(train_year):
+            output_feature = []
+            for j in range(self.num_rel):
+                idx_rel_list = [index_list[i][j][idx.item()] for idx in input_ids] # batch_size * rel_size(arbitrary)
+                tmp = []
+                for idx_rel in idx_rel_list:
+                    idx_rel_tensor = torch.tensor(idx_rel).to(self.device)
+                    seq_output_rel = []
+                    if idx_rel:
+                        hidden = self.mlp(torch.index_select(embeddings[i], 0, idx_rel_tensor))
+                        output, final_state = self.gru(torch.unsqueeze(hidden, 0))
+                        tmp.append(torch.cat([final_state[-1], final_state[-2]], dim=1))
+                    else:
+                        tmp.append(torch.zeros([1, self.hidden_size]).to(self.device))
+                output_feature.append(torch.squeeze(torch.stack(tmp), 1))
+            
+            # output_mean = torch.mean(torch.stack(output_feature), 0)
+            tmp_emb = embeddings[i]
+            tmp_emb[0] = torch.zeros(1, self.graph_emb_size)
+            idxs = alignment_list[input_ids][:, i]
+            idxs = torch.where(idxs>=0, idxs, 0)
+            self_features = torch.unsqueeze(torch.index_select(embeddings[i], 0, idxs), 0)
+            value = torch.cat([self_features, torch.stack(output_feature)], 0)
+            key = value
+            attn_output, output_weights = self.multihead_attn(self.query, key, value)
+            influence_embeddings.append(torch.mean(attn_output, 0))
+        influence_embeddings = torch.stack(influence_embeddings)
+        influence_embeddings = torch.reshape(influence_embeddings, (-1, train_year, self.influence_emb_size))
         return influence_embeddings
 
 
@@ -122,7 +190,6 @@ class Static_Plus_Influence_Model(nn.Module):
 
 
 # Bi-RNN for each neighbors of input, and then influence by weight
-# May lead to different result depends on initialization 
 class Dynamic_Influence_Model(nn.Module):
     def __init__(self, influence_emb_size, graph_emb_size, num_rel, device):
         super(Dynamic_Influence_Model, self).__init__()
