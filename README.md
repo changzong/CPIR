@@ -11,7 +11,7 @@
 - You need to download the data files into a folder named "data" and put it into the same folder with code.
 
 ## dataset
-- You can access the dataset used in this work from our Google Drive link.
+- You can access the dataset used in this work from our following Google Drive links:
 - [AIPatent](https://drive.google.com/drive/folders/1Clu05o7uUcAmGFeQPZGFaN1hkQWq0pNe?usp=sharing) is our own contributed dataset using global patents from artificial intelligence fields.
 - [APS](https://drive.google.com/drive/folders/1rUW8_cW-ogfXelj44k5Rv019molCj2Ww?usp=sharing) (Original from [APS](https://journals.aps.org/datasets)) is an open acdemic paper dataset from physics fields.
 
