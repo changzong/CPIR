@@ -12,8 +12,8 @@
 
 ## dataset
 - You can access the dataset used in this work from our Google Drive link.
-- [AIPatent](https://drive.google.com/drive/folders/1Clu05o7uUcAmGFeQPZGFaN1hkQWq0pNe?usp=sharing)
-- [APS](https://drive.google.com/drive/folders/1rUW8_cW-ogfXelj44k5Rv019molCj2Ww?usp=sharing), (Original data is from [APS](https://journals.aps.org/datasets))
+- [AIPatent](https://drive.google.com/drive/folders/1Clu05o7uUcAmGFeQPZGFaN1hkQWq0pNe?usp=sharing) is our own contributed dataset using global patents from artificial intelligence fields.
+- [APS](https://drive.google.com/drive/folders/1rUW8_cW-ogfXelj44k5Rv019molCj2Ww?usp=sharing) (Original from [APS](https://journals.aps.org/datasets)) is an open acdemic paper dataset from physics fields.
 
 ## Commands to run
 
