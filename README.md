@@ -1,13 +1,19 @@
-# Instructions on how to reproduce the frameworks proposed in this paper.
+# CTPIR: Citation Trajectory Prediction via Publication Influence Representation Using Temporal Knowledge Graph.
 
-- paper title: Citation Trajectory Prediction via Publication Influence Representation Using Temporal Knowledge Graph
+- A general framework is implemented for predicting sequences using temporal graphs.
+- This is the repository for reproducing the results in the paper.
 
 ## Prerequisites
 
 - We test the code in both MacOS Monterey and Window 10 operating systems.
 - Anaconda 3 with Python 3.9 should be firstly installed.
 - The requirements and how to setup the environment with Conda is listed in the file `requirements.txt`.
-- You need to unzip the uploaded appendix file and put all data files into a single folder
+- You need to download the data files into a folder named "data" and put it into the same folder with code.
+
+## dataset
+- You can access the dataset used in this work from our Google Drive link.
+- [AIPatent](https://drive.google.com/drive/folders/1Clu05o7uUcAmGFeQPZGFaN1hkQWq0pNe?usp=sharing)
+- [APS](https://drive.google.com/drive/folders/1rUW8_cW-ogfXelj44k5Rv019molCj2Ww?usp=sharing), (Original data is from [APS](https://journals.aps.org/datasets))
 
 ## Commands to run
 
