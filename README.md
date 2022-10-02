@@ -2,7 +2,7 @@
 
 - A general framework is implemented for predicting sequences using temporal graphs.
 - This is the repository for reproducing the results in the paper.
-![CTPIR framework](./framework.pdf "The framework of CTPIR")
+![CTPIR framework](./framework.png "The framework of CTPIR")
 
 ## Prerequisites
 
