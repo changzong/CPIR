@@ -84,24 +84,29 @@ optimizer = optim.Adam(model.parameters(), lr=args.lr)
 model.to(device)
 
 for epoch in range(args.epochs):
-    train_loss = 0.0
-    valid_loss = 0.0
+    train_loss1 = 0.0
+    valid_loss1 = 0.0
+    train_loss2 = 0.0
+    valid_loss2 = 0.0
     model.train()
     print("epoch:{}".format(epoch))
     for i, batch in enumerate(train_loader):
         print("batch:{}/{}, epoch:{}".format(i, len(train_loader)-1, epoch))
         output_seq = batch[1].to(device)
         intput_ids = batch[0].to(device)
-        loss, citation_pred = model(adj_list, feature_list, index_list, alignment_list, output_seq, intput_ids, train_neighbors, flag='train')
-        print("current batch training loss:{}".format(loss))
+        loss1, loss2, citation_pred = model(adj_list, feature_list, index_list, alignment_list, output_seq, intput_ids, train_neighbors, flag='train')
+        print("current batch training loss:{}".format(loss1))
         optimizer.zero_grad()
-        loss.backward()
+        loss1.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
         optimizer.step()
-        train_loss += loss.item() * args.batch_size
+        train_loss1 += loss1.item() * args.batch_size
+        train_loss2 += loss2.item() * args.batch_size
 
-    train_loss = train_loss / len(train_loader.sampler)
-    print("epoch: {}, training loss:{}".format(epoch, train_loss))
+    train_loss1 = train_loss1 / len(train_loader.sampler)
+    train_loss2 = train_loss2 / len(train_loader.sampler)
+    print("epoch: {}, training loss RMLSE:{}".format(epoch, train_loss1))
+    print("epoch: {}, training loss MALE:{}".format(epoch, train_loss2))
 
     print("evaluating for epoch: {}".format(epoch))
     with torch.no_grad():
@@ -109,9 +114,7 @@ for epoch in range(args.epochs):
             model.eval()
             valid_input_ids = valid_input_ids.to(device)
             valid_output_seq = valid_output_seq.to(device)
-            loss, val_pred = model(adj_list, feature_list, index_list, alignment_list, valid_output_seq, valid_input_ids, valid_neighbors, flag='test')
-            # print(str(valid_output_seq.tolist()[:5]))
-            # print(str(val_pred.tolist()[:5]))
+            loss1, loss2, val_pred = model(adj_list, feature_list, index_list, alignment_list, valid_output_seq, valid_input_ids, valid_neighbors, flag='test')
             if epoch == 4:
                 with open('./results/output_seq_'+args.emb_mode+'_'+args.impute_mode+'_'+args.ts_mode+'_'+args.subtask, 'a') as f:
                     for item in valid_output_seq.tolist():
@@ -120,9 +123,12 @@ for epoch in range(args.epochs):
                     for item in val_pred.tolist():
                         f.write(str(item) + '\n')
 
-            valid_loss += loss.item() * args.batch_size
-        valid_loss = valid_loss / len(valid_loader.sampler)
-        print("epoch: {}, validation loss:{}".format(epoch, valid_loss))
+            valid_loss1 += loss1.item() * args.batch_size
+            valid_loss2 += loss2.item() * args.batch_size
+        valid_loss1 = valid_loss1 / len(valid_loader.sampler)
+        valid_loss2 = valid_loss2 / len(valid_loader.sampler)
+        print("epoch: {}, validation loss RMLSE:{}".format(epoch, valid_loss1))
+        print("epoch: {}, validation loss MALE:{}".format(epoch, valid_loss2))
         
 print("training done!!")
     

@@ -139,18 +139,10 @@ class Model(nn.Module):
 
         loss = None
         if flag == 'train':
-            if self.conf['loss_func'] == 'RMLSE':
-                loss = self.RMLSE_loss(citation_pred, output_seq)
-            elif self.conf['loss_func'] == 'MALE':
-                loss = self.MALE_loss(citation_pred, output_seq)
-            elif self.conf['loss_func'] == 'MAPE':
-                loss = self.MAPE_loss(citation_pred, output_seq)
+            loss1 = self.RMLSE_loss(citation_pred, output_seq)
+            loss2 = self.MALE_loss(citation_pred, output_seq)
         else:
-            if self.conf['loss_func'] == 'RMLSE':
-                loss = self.RMLSE_loss(citation_pred, output_seq)
-            elif self.conf['loss_func'] == 'MALE':
-                loss = self.MALE_loss(citation_pred, output_seq)
-            elif self.conf['loss_func'] == 'MAPE':
-                loss = self.MAPE_loss(citation_pred, output_seq)
+            loss1 = self.RMLSE_loss(citation_pred, output_seq)
+            loss2 = self.MALE_loss(citation_pred, output_seq)
         
-        return loss, citation_pred
+        return loss1, loss2, citation_pred

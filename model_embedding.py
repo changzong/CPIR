@@ -42,7 +42,6 @@ class RGCN_Model(nn.Module):
     def forward(self, feature_list, adj_list, alignment_list, train_year):
         embeddings = []
         for t in range(train_year):
-            pdb.set_trace()
             x = feature_list[t].to(self.device)
             y = adj_list[t]
             for i, layer in enumerate(self.layers):
