@@ -1,6 +1,6 @@
-# CTPIR: Citation Trajectory Prediction via Publication Influence Representation Using Temporal Knowledge Graph.
+# CTPIR
 
-- A general framework is implemented for predicting sequences using temporal graphs.
+- This is the implementation of our paper "Citation Trajectory Prediction via Publication Influence Representation Using Temporal Knowledge Graph".
 - This is the repository for reproducing the results in the paper.
 ![CTPIR framework](./framework.png "The framework of CTPIR")
 
@@ -69,4 +69,21 @@ python main.py --data_dir ../data/AIPatent --start_year 2012 --predict_year 8 --
 - Train CTPIR-logistic framework with AIPatent dataset on the Mixed subtask to predict the citation counts in the next 10 years:
 ```
 python main.py --data_dir ../data/AIPatent --start_year 2012 --time_steps_history 10 --time_steps_predict 10 --use_cuda --emb_mode rgcn-hist --impute_mode dynamic --ts_mode log --subtask mix --lr 0.01 --batch_size 512 --loss_func RMLSE --epochs 20
+```
+
+## Contact 
+Chang Zong zongchang@zju.edu.cn
+
+## Bibtex
+```
+@misc{https://doi.org/10.48550/arxiv.2210.00450,
+  doi = {10.48550/ARXIV.2210.00450},
+  url = {https://arxiv.org/abs/2210.00450},
+  author = {Zong, Chang and Zhuang, Yueting and Lu, Weiming and Shao, Jian and Tang, Siliang},
+  keywords = {Artificial Intelligence (cs.AI), Social and Information Networks (cs.SI), FOS: Computer and information sciences, FOS: Computer and information sciences, I.2.4; J.4},
+  title = {Citation Trajectory Prediction via Publication Influence Representation Using Temporal Knowledge Graph},
+  publisher = {arXiv},
+  year = {2022},
+  copyright = {Creative Commons Attribution Non Commercial No Derivatives 4.0 International}
+}
 ```
