@@ -1,8 +1,8 @@
-# CTPIR
+# CPIR
 
-- This is the implementation of our paper "Citation Trajectory Prediction via Publication Influence Representation Using Temporal Knowledge Graph".
+- This is the implementation of our paper "Citation Prediction via Influence Representation Using Temporal Graphs".
 - This is the repository for reproducing the results in the paper.
-![CTPIR framework](./framework.png "The framework of CTPIR")
+![CPIR framework](./framework.png "The framework of CPIR")
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@
 
 ### Some examples:
 
-- Train CTPIR framework with APS dataset on the Mixed subtask to predict the citation counts in the next 5 years:
+- Train CPIR framework with APS dataset on the Mixed subtask to predict the citation counts in the next 5 years:
 ```
 python main.py --data_dir ../data/APS --start_year 2000 --time_steps_history 5 --time_steps_predict 5 --use_cuda --emb_mode rgcn-hist --impute_mode dynamic --ts_mode logistic --subtask mix --lr 0.01 --batch_size 512 --loss_func RMLSE --epochs 20
 ```
@@ -61,12 +61,12 @@ python main.py --data_dir ../data/APS --start_year 2000 --time_steps_history 5 -
 python main.py --data_dir ../data/AIPatent --start_year 2012 --time_steps_history 10 --time_steps_predict 10 --use_cuda --emb_mode rgcn --impute_mode hdgnn --ts_mode linear --subtask mix --lr 0.01 --batch_size 512 --loss_func RMLSE --epochs 20
 ```
 
-- Train CTPIR framework with AIPatent dataset on the Mixed subtask to predict the citation counts at the 8th year:
+- Train CPIR framework with AIPatent dataset on the Mixed subtask to predict the citation counts at the 8th year:
 ```
 python main.py --data_dir ../data/AIPatent --start_year 2012 --predict_year 8 --time_steps_history 10 --time_steps_predict 10 --use_cuda --emb_mode rgcn-hist --impute_mode dynamic --ts_mode logistic --subtask mix --lr 0.01 --batch_size 512 --loss_func RMLSE --epochs 20
 ```
 
-- Train CTPIR-logistic framework with AIPatent dataset on the Mixed subtask to predict the citation counts in the next 10 years:
+- Train CPIR-logistic framework with AIPatent dataset on the Mixed subtask to predict the citation counts in the next 10 years:
 ```
 python main.py --data_dir ../data/AIPatent --start_year 2012 --time_steps_history 10 --time_steps_predict 10 --use_cuda --emb_mode rgcn-hist --impute_mode dynamic --ts_mode log --subtask mix --lr 0.01 --batch_size 512 --loss_func RMLSE --epochs 20
 ```
