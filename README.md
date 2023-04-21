@@ -74,16 +74,3 @@ python main.py --data_dir ../data/AIPatent --start_year 2012 --time_steps_histor
 ## Contact 
 Chang Zong zongchang@zju.edu.cn
 
-## Bibtex
-```
-@misc{https://doi.org/10.48550/arxiv.2210.00450,
-  doi = {10.48550/ARXIV.2210.00450},
-  url = {https://arxiv.org/abs/2210.00450},
-  author = {Zong, Chang and Zhuang, Yueting and Lu, Weiming and Shao, Jian and Tang, Siliang},
-  keywords = {Artificial Intelligence (cs.AI), Social and Information Networks (cs.SI), FOS: Computer and information sciences, FOS: Computer and information sciences, I.2.4; J.4},
-  title = {Citation Trajectory Prediction via Publication Influence Representation Using Temporal Knowledge Graph},
-  publisher = {arXiv},
-  year = {2022},
-  copyright = {Creative Commons Attribution Non Commercial No Derivatives 4.0 International}
-}
-```
